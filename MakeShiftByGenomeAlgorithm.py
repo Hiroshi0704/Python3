@@ -298,7 +298,7 @@ if __name__=='__main__':
 		print ("  Max:{}".format(max_))
 		print ("  Avg:{}".format(avg_))
 
-        # 現行と新世代を入れ替え
+		# 現行と新世代を入れ替え
 		objects = new_objects
 
 		# 終了条件
