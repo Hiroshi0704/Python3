@@ -5,22 +5,22 @@ from decimal import *
 
 class GenomShift:
 
-	length_shift = None
 	### length_shift
 	# [0,0,0,0,0] day 1
 	# ...
 	# ...
 	# [0,0,0,0,0] day last
+	length_shift = None
 
-	width_shift = None
 	### width_shift
 	# [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] staff 1
 	# ...
 	# ...
 	# [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] staff last
+	width_shift = None
 
-	evaluation = 0
 	### evaluation = integer型 数値が低いほど高評価
+	evaluation = 0
 	
 	def __init__(self, length_shift, evaluation):
 		self.length_shift = length_shift
@@ -54,15 +54,6 @@ class GenomShift:
 	# SET #
 	def setLengthShift(self, length_shift):
 		self.length_shift = length_shift
-		# width_shiftへ変換
-		'''
-		width_shift = []
-		for i in range(len(self.length_shift[0])):
-			m = []
-			for l in self.length_shift:
-				m.append(l[i])
-			width_shift.append(m)
-		'''
 		width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
 		self.width_shift = width_shift
 	
@@ -93,11 +84,11 @@ class GenomShift:
 # 簡易変数 = m
 #####
 
-# クラスインスタンスを生成する
+# インスタンスを生成する
 def create(weekday_shift_pattern, day_length):
-
 	length_shift = []
 	for d in range(day_length):
+		# 変数省略
 		wp = weekday_shift_pattern
 		ls = [i for i in random.sample(wp, len(wp))]
 		length_shift.append(ls)
@@ -135,10 +126,6 @@ def evaluate(obj):
 	・7連続勤務
 	・夜勤明けに日勤（夜勤後は必ず休み）
 
-	### 絶対事項 ###
-	・1人１日希望休の申請
-	・平均的な勤務時間
-
 	#### 上記整理 ####
 	# 7連続勤務 #
 	'X' = 休み
@@ -148,21 +135,9 @@ def evaluate(obj):
 
 	# 夜勤明けに日勤 #
 	'B' = 夜勤
-	夜勤明けに日勤の場合 = true_cnt += 1
+	夜勤明けに日勤の場合 += 2
 	width_shiftを使用
-	['B','X','B','A','B','C','X'.......] true_cnt = 2
-
-	# 1人１日希望休の申請 #
-	８人の場合、８人の希望休をリストへ格納
-	[1, 4, 6, 8, 9, 10, 26, 15] ３人目の希望休は６日目となる
-	length_shiftを使用
-	希望休ではない場合は休みの人と入れ替える
-
-	# 平均的な勤務時間 #
-	width_shiftを使用
-	勤務時間を計算し人数で割った平均と
-	個人の勤務時間
-	(+ -　５時間)以内を良しとする
+	['B','X','B','A','B','C','X'.......] += 4
 	'''
 
 	obj.setEvaluation(0)
@@ -171,12 +146,10 @@ def evaluate(obj):
 	### ７連続勤務判定 ### 
 	# 評価値：３
 	P = 3
-	# print('### ７連続勤務判定 ###')
 	for shift in obj.getWidthShift():
 		work_cnt = 0
 		for s in shift:
 			if work_cnt >= 7:
-				# print(shift)
 				work_cnt = 0
 				point += P
 				continue
@@ -189,31 +162,17 @@ def evaluate(obj):
 	### 夜勤明けに日勤（夜勤後は必ず休み） ###
 	# 評価値：２
 	P = 2
-	# print('### 夜勤明け日勤判定 ###')
 	for shift in obj.getWidthShift():
 		for i in range(len(shift)):
 			# 初日をスキップ
 			if i == 0: continue
 			# 昨晩夜勤だった場合　かつ　今日休み以外の場合
 			if shift[i-1] == NIGHT and shift[i] != REST:
-				# print('day: {}'.format(i+1))
-				# print(shift)
 				point += P
 			else: continue
 
-
-
 	obj.setEvaluation(point)
 	return obj
-	
-### 命名ルール ###
-# クラス複数 = objects
-# クラス単体 = obj
-# シフト２次配列時 = shift_data -> shift_data[0] = shift
-# シフト１次配列時 = shift -> shift[0] = s
-# シフト内容 = s -> s = 'A'
-# 簡易変数 = m
-#####
 
 # 変異
 def mutation(objects, individual_mutation, day_mutation, weekday_shift_pattern):
@@ -246,20 +205,41 @@ def create_new_objects(objects, elite_objects, cross_objects):
 		sorted_objects.pop(0)
 	sorted_objects.extend(elite_objects)
 	sorted_objects.extend(cross_objects)
-	# print(sorted_objects)
 	return sorted_objects
 
+
+'''
+# 1人１日希望休の申請 #
+８人の場合、８人の希望休をリストへ格納
+[1, 4, 6, 8, 9, 10, 26, 15] ３人目の希望休は６日目となる
+length_shiftを使用
+希望休ではない場合は休みの人と入れ替える
+'''
+def take_rest(obj, off_day):
+
+	shift = obj.getLengthShift()
+	for staff, day in enumerate(off_day):
+		if shift[day - 1][staff] != REST:
+			for i, s in enumerate(shift[day - 1]):
+				if i == staff: continue
+				if s == REST:
+					shift[day - 1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+	
+	obj.setLengthShift(shift)
+	return obj
 
 ######################################################################################## setting
 WEEKDAY_SHIFT_PATTERN = ['A','A','A','B','C','X','X','X']
 REST = 'X'
 NIGHT = 'B'
 
+OFF_DAY = [1,2,3,4,5,6,7,8]
+
 DAY_LENGTH = 28
 ELITE_LENGTH = 20
 
 MAX_SHIFT_LENDTH = 100
-MAX_GENERATION = 40
+MAX_GENERATION = 120
 
 INDIVIDUAL_MUTATION = 0.1
 DAY_MUTATION = 0.1
@@ -281,25 +261,24 @@ if __name__=='__main__':
 	
 	# 初期状態
 	objects = [ create(WEEKDAY_SHIFT_PATTERN, DAY_LENGTH) for i in range(MAX_SHIFT_LENDTH) ]
-	# print(objects)
-
-	# 世代交代開始
+	
+	# 世代交代開始 ############################################ for
 	for count in range(1, MAX_GENERATION + 1):
+		
 		# 評価
-		m = []
-		for obj in objects:
-			m.append(evaluate(obj))
-		objects = m
+		objects = [ evaluate(obj) for obj in objects ]
+		
+		# 希望休をとる
+		objects = [ take_rest(obj, OFF_DAY) for obj in objects ]
+
 		# エリート選択
 		elite_objects = select(objects, ELITE_LENGTH)
+		
 		# 交叉
 		cross_objects = []
 		for i in range(ELITE_LENGTH):
 			m = crossover(elite_objects[i-1], elite_objects[i], DAY_LENGTH)
 			cross_objects.extend(m)
-		# cross_objects = [ crossover(elite_objects[i-1], elite_objects[i], DAY_LENGTH) for i in range(ELITE_LENGTH)]
-		# print(cross_objects[0].getLengthShift())
-
 		
 		# 世代交代
 		new_objects = create_new_objects(objects, elite_objects, cross_objects)
@@ -319,11 +298,30 @@ if __name__=='__main__':
 		print ("  Max:{}".format(max_))
 		print ("  Avg:{}".format(avg_))
 
-        # 現行と入れ替え
+        # 現行と新世代を入れ替え
 		objects = new_objects
 
-	print('=== 最適化したシフト ===')
-	for i in elite_objects[0].getWidthShift():
+		# 終了条件
+		if min_ <= 0: break
+	
+	# 世代交代終了 ############################################ endfor
+
+	print('\n=== 設定 ========')
+	print('日数：{}'.format(DAY_LENGTH))
+	print('シフトタイプ：{}'.format(WEEKDAY_SHIFT_PATTERN))
+	print('希望休：{}'.format(OFF_DAY))
+	print('{} = 休み'.format(REST))
+	print('{} = 夜勤'.format(NIGHT))
+	print('7連勤禁止')
+	print('夜勤明けは必ず休み')
+	print('==================')
+	print('最適化したシフト')
+	days = [str(i).rjust(2) for i in range(1,DAY_LENGTH+1)]
+	elite_shift = [[ s.rjust(2) for s in shift] for shift in elite_objects[0].getWidthShift() ]
+	print('====='*35)
+	print(days)
+	for i in elite_shift:
 		print(i)
+	print('====='*35)
 
 ######################################################################################## test
