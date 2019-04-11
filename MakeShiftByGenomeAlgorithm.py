@@ -302,25 +302,34 @@ def add_holiday_shift(obj, holiday_shift_pattern, when_is_holiday):
     return obj
 
 ######################################################################################## setting
+################################### ユーザ指定項目
+# 平日勤務体制
 WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'C','C','X', 'B','X','X', 'X']
+# 土日祝日勤務体制
 HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'C','X','X', 'B','X','X', 'X']
-WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
-
+# 勤務時間
 WORK_TIME = {'A':8, 'B':15, 'C':11, 'X':0}
-
+# 休日・夜勤設定
 REST = 'X'
 NIGHT = 'B'
-
+# 希望休
 OFF_DAY = [1,5,8, 12,16,20, 25,28,13, 14]
-
+# 土日祝日
+WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
+# 作成する日数
 DAY_LENGTH = 28
-ELITE_LENGTH = 30
-
-MAX_SHIFT_LENDTH = 100
-MAX_GENERATION = 3000
+# 禁止連続日数
 MAX_CONSECUTIVE_WORK = 5
-
+################################### ユーザ指定項目　ここまで
+# 選択するエリート数
+ELITE_LENGTH = 30
+# シフト数
+MAX_SHIFT_LENDTH = 100
+# 繰り返し世代数
+MAX_GENERATION = 3000
+# 変異確率
 INDIVIDUAL_MUTATION = 0.5
+# 日別変異確率
 DAY_MUTATION = 0.1
 ######################################################################################## main
 
