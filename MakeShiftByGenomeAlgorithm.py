@@ -394,9 +394,8 @@ if __name__=='__main__':
         print ("  Avg:{}".format(avg_))
 
 
-        # 最小値を比較
+        ### 最小値を比較 ###
         if last_min == None: last_min = min_
-
         # 終了処理 #
         # 最小評価値が０になったら終了
         if min_ <= 0: break
