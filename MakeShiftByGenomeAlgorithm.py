@@ -97,8 +97,18 @@ def create(weekday_shift_pattern, day_length):
 
 # エリートを選択する
 def select(objects, elite_length):
+	### エリート保存戦略 ###
+	'''
 	sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
 	elite_objects = [sorted_objects.pop(0) for i in range(elite_length)]
+	'''
+
+	### トーナメント式 ###
+	# ランダムに選手を選択し、ソートする
+	selected_objects = random.sample(objects, elite_length*2)
+	sorted_objects = sorted(selected_objects, reverse=False, key=lambda u: u.evaluation)
+	elite_objects = [ sorted_objects.pop(0) for i in range(elite_length) ]
+
 	return elite_objects
 
 # 一点交叉
@@ -120,14 +130,14 @@ def crossover(red, blue, day_length):
 	return cross_objects
 
 # 評価・審査
-def evaluate(obj):
+def evaluate(obj, max_consecutive_work):
 	'''
 	### 禁止事項 ###
-	・7連続勤務
+	・N連続勤務
 	・夜勤明けに日勤（夜勤後は必ず休み）
 
 	#### 上記整理 ####
-	# 7連続勤務 #
+	# N連続勤務 #
 	'X' = 休み
 	width_shiftを使用
 	['A','C','A','A','C','A','C'.......] work_cnt = 7
@@ -139,18 +149,15 @@ def evaluate(obj):
 	width_shiftを使用
 	['B','X','B','A','B','C','X'.......] += 4
 	'''
-
-	obj.setEvaluation(0)
 	point = 0
 
-	### ７連続勤務判定 ### 
-	# 評価値：３
-	P = 3
+	### N連続勤務判定 ### 
+	# 評価値
+	P = 1
 	for shift in obj.getWidthShift():
 		work_cnt = 0
 		for s in shift:
-			if work_cnt >= 7:
-				work_cnt = 0
+			if work_cnt > max_consecutive_work:
 				point += P
 				continue
 
@@ -160,8 +167,8 @@ def evaluate(obj):
 				work_cnt += 1
 
 	### 夜勤明けに日勤（夜勤後は必ず休み） ###
-	# 評価値：２
-	P = 2
+	# 評価値
+	P = 1
 	for shift in obj.getWidthShift():
 		for i in range(len(shift)):
 			# 初日をスキップ
@@ -228,20 +235,53 @@ def take_rest(obj, off_day):
 	obj.setLengthShift(shift)
 	return obj
 
+# 1人の勤務時間の合計を返す
+def count_work_time(shift, work_time):
+	# work_times
+	wt = 0
+	for s in shift:
+		wt += work_time[s]
+	return wt 
+
+# 勤務時間を評価
+def evaluate_work_time(obj, work_time):
+	### 勤務時間を評価 ###
+	# 評価値
+	P = 1
+	point = 0
+	# 閾値
+	min_max = 5
+
+	m = [ count_work_time(shift, work_time) for shift in obj.getWidthShift() ]
+	avg_ = sum(m) / len(m)
+
+	for shift in obj.getWidthShift():
+		cwt = count_work_time(shift, work_time)
+		if (avg_ + min_max) <= cwt or (avg_ - min_max) >= cwt:
+			point += P
+	m = obj.getEvaluation()
+	obj.setEvaluation(m + point)
+
+	return obj
+
+
 ######################################################################################## setting
-WEEKDAY_SHIFT_PATTERN = ['A','A','A','B','C','X','X','X']
+WEEKDAY_SHIFT_PATTERN = ['A','A','C','C','B','X','X','X','X','X']
+WORK_TIME = {'A':8, 'B':15, 'C':11, 'X':0}
+
 REST = 'X'
 NIGHT = 'B'
 
-OFF_DAY = [1,2,3,4,5,6,7,8]
+OFF_DAY = [1,5,8,12,16, 20,25,28,13,14]
 
 DAY_LENGTH = 28
-ELITE_LENGTH = 20
+ELITE_LENGTH = 30
 
 MAX_SHIFT_LENDTH = 100
-MAX_GENERATION = 120
+MAX_GENERATION = 3000
+MAX_CONSECUTIVE_WORK = 5
 
-INDIVIDUAL_MUTATION = 0.1
+INDIVIDUAL_MUTATION = 0.5
 DAY_MUTATION = 0.1
 ######################################################################################## main
 
@@ -258,19 +298,21 @@ if __name__=='__main__':
 	objects = []
 	elite_objects = []
 	cross_objects = []
+	last_min = None
+	same_cnt = 0
 	
 	# 初期状態
 	objects = [ create(WEEKDAY_SHIFT_PATTERN, DAY_LENGTH) for i in range(MAX_SHIFT_LENDTH) ]
-	
+
+	# 評価
+	objects = [ evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in objects ]
+
+	# 勤務時間を評価
+	objects = [ evaluate_work_time(obj, WORK_TIME) for obj in objects ]
+
 	# 世代交代開始 ############################################ for
 	for count in range(1, MAX_GENERATION + 1):
 		
-		# 評価
-		objects = [ evaluate(obj) for obj in objects ]
-		
-		# 希望休をとる
-		objects = [ take_rest(obj, OFF_DAY) for obj in objects ]
-
 		# エリート選択
 		elite_objects = select(objects, ELITE_LENGTH)
 		
@@ -285,6 +327,15 @@ if __name__=='__main__':
 		
 		# 変異
 		new_objects = mutation(new_objects, INDIVIDUAL_MUTATION, DAY_MUTATION, WEEKDAY_SHIFT_PATTERN)
+
+		# 希望休をとる
+		new_objects = [ take_rest(obj, OFF_DAY) for obj in new_objects ]
+
+		# 評価
+		new_objects = [ evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in new_objects ]
+
+		# 勤務時間を評価
+		new_objects = [ evaluate_work_time(obj, WORK_TIME) for obj in new_objects ]
 
 		# 進化結果を表示
 		fits = [i.getEvaluation() for i in objects]
@@ -301,27 +352,48 @@ if __name__=='__main__':
 		# 現行と新世代を入れ替え
 		objects = new_objects
 
-		# 終了条件
+		# 最小値を比較
+		if last_min == None: last_min = min_
+
+		# 終了処理 #
+		# 最小評価値が０になったら終了
 		if min_ <= 0: break
-	
+		# 最小評価値が N 世代変化がない場合終了
+		N = 1000
+		if same_cnt >= N: break
+
+		# 現世代と前世代の最小評価値が同じならカウンター　＋１
+		if last_min == min_:
+			same_cnt += 1
+		# それ以外は前世の変数を更新、カウンター　０
+		else:
+			same_cnt = 0
+			last_min = min_
+		print('  Cnt:{}'.format(same_cnt))
+
 	# 世代交代終了 ############################################ endfor
 
-	print('\n=== 設定 ========')
-	print('日数：{}'.format(DAY_LENGTH))
-	print('シフトタイプ：{}'.format(WEEKDAY_SHIFT_PATTERN))
-	print('希望休：{}'.format(OFF_DAY))
-	print('{} = 休み'.format(REST))
-	print('{} = 夜勤'.format(NIGHT))
-	print('7連勤禁止')
-	print('夜勤明けは必ず休み')
+	print('\n=== 設定 =========')
+	print(' 日数：{}'.format(DAY_LENGTH))
+	print(' シフトタイプ：{}'.format(WEEKDAY_SHIFT_PATTERN))
+	print(' 希望休：{}'.format(OFF_DAY))
+	print(' {} = 休み'.format(REST))
+	print(' {} = 夜勤'.format(NIGHT))
+	print(' それぞれの勤務時間：{}'.format(WORK_TIME))
+	print(' 連勤：{}日まで'.format(MAX_CONSECUTIVE_WORK))
+	print(' 夜勤明けは必ず休み')
 	print('==================')
-	print('最適化したシフト')
 	days = [str(i).rjust(2) for i in range(1,DAY_LENGTH+1)]
-	elite_shift = [[ s.rjust(2) for s in shift] for shift in elite_objects[0].getWidthShift() ]
-	print('====='*35)
+	sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
+	elite_shift = sorted_objects[0].getWidthShift()
+	m = [ count_work_time(shift, WORK_TIME) for shift in elite_shift ]
+	avg_ = sum(m) / len(m)
+	print(' 評価値：{0}  平均勤務時間：{1}'.format(sorted_objects[0].getEvaluation(), avg_))
+	print('-----'*40)
 	print(days)
 	for i in elite_shift:
-		print(i)
-	print('====='*35)
+		k = [ s.rjust(2) for s in i] 
+		print('{0} Tal: {1}'.format(k, count_work_time(i, WORK_TIME)))
+	print('-----'*40)
 
 ######################################################################################## test
