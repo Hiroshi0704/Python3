@@ -22,7 +22,7 @@ class GenomShift:
     ### evaluation = integer型 数値が低いほど高評価
     evaluation = 0
 
-    ### 評価値をスタッフのインデックスを格納
+    ### 不良箇所のインデックスを格納　width_shift型
     error_line = []
 
     
@@ -302,19 +302,66 @@ def add_holiday_shift(obj, holiday_shift_pattern, when_is_holiday):
     obj.setLengthShift(shift_data)
     return obj
 
+############################################## 作成中
+# 不良箇所を特定 勤務時間を判定
+def whereis_error_work_time(obj, work_time, avg_):
+    min_max = 5
+    error_line = obj.getErrorLine()
+    for i, shift in enumerate(obj.getWidthShift()):
+        tal = 0
+        for s in shift:
+            tal += work_time[s]
+
+        if abs(tal - avg_) > min_max:
+            if i not in error_line:
+                error_line.append(i)
+
+    obj.setErrorLine(error_line)
+    return obj
+
+# 不良箇所を特定 夜勤明けを判定
+def whereis_error_night_work(obj, night, rest):
+    error_line = obj.getErrorLine()
+    for e, shift in enumerate(obj.getWidthShift()):
+        for i in range(1, len(shift)):
+            if shift[i-1] == night and shift[i] != rest:
+                if e not in error_line:
+                    error_line.append(e)
+    obj.setErrorLine(error_line)
+    return obj 
+
+# 不良箇所を特定 連続勤務を判定
+def whereis_error_consentive_work():
+    pass
+
+# 不良箇所に色付け
+def add_error_line_color(error_line, shift_data, color):
+    color_shift_data = []
+    for i, shift in enumerate(shift_data):
+        if i in error_line:
+            color_shift = [ color + s + Color.END for s in shift ]
+        else:
+            color_shift = [ s for s in shift ]
+        color_shift_data.append(color_shift)
+
+    return color_shift_data
+    
+############################################## 作成中
+
+
 ######################################################################################## setting
 ################################### ユーザ指定項目
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'C','C','X', 'B','X','X', 'X']
+WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'C','X','X', 'B','X']
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'C','X','X', 'B','X','X', 'X']
+HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'X','X','X', 'B','X']
 # 勤務時間
-WORK_TIME             = {'A':8, 'B':15, 'C':11, 'X':0}
+WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
 # 希望休
-OFF_DAY         = [1,5,8, 12,16,20, 25,28,13, 14]
+OFF_DAY         = [1,5,8, 12,16,20, 25,28]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -353,11 +400,11 @@ if __name__=='__main__':
     same_cnt = 0
     
     # 初期状態
-    objects = [ create(WEEKDAY_SHIFT_PATTERN, DAY_LENGTH) for i in range(MAX_SHIFT_LENDTH) ]
-    objects = [ add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects ]
+    objects = ( create(WEEKDAY_SHIFT_PATTERN, DAY_LENGTH) for i in range(MAX_SHIFT_LENDTH) )
+    objects = ( add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects )
 
     # 評価
-    objects = [ evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in objects ]
+    objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in objects )
 
     # 勤務時間を評価
     objects = [ evaluate_work_time(obj, WORK_TIME) for obj in objects ]
@@ -381,10 +428,10 @@ if __name__=='__main__':
         new_objects = mutation(new_objects, INDIVIDUAL_MUTATION, DAY_MUTATION)
 
         # 希望休をとる
-        new_objects = [ take_rest(obj, OFF_DAY) for obj in new_objects ]
+        new_objects = ( take_rest(obj, OFF_DAY) for obj in new_objects )
 
         # 評価
-        new_objects = [ evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in new_objects ]
+        new_objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK) for obj in new_objects )
 
         # 勤務時間を評価
         new_objects = [ evaluate_work_time(obj, WORK_TIME) for obj in new_objects ]
@@ -437,11 +484,11 @@ if __name__=='__main__':
     print('  連勤　　　　　: {}日まで'.format(MAX_CONSECUTIVE_WORK))
     print('  {} = 休み'.format(REST))
     print('  {} = 夜勤'.format(NIGHT))
-    print('  夜勤明けは必ず休み')
+    print('  夜勤明けは休み')
     print('===========================================')
 
     # 日付を作成
-    days       = [str(i).rjust(2) for i in range(1,DAY_LENGTH+1)]
+    days       = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
     color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
     days       = color_days
     
@@ -453,7 +500,14 @@ if __name__=='__main__':
     # 勤務時間の平均値を取得
     m    = [ count_work_time(shift, WORK_TIME) for shift in best_shift ]
     avg_ = sum(m) / len(m)
-    print(' 異常値：{0}点  平均勤務時間：{1}'.format(best_obj.getEvaluation(), avg_))
+    best_obj = whereis_error_work_time(best_obj, WORK_TIME, avg_)
+    best_obj = whereis_error_night_work(best_obj, NIGHT, REST)
+
+    print('-----第{}世代の結果-----'.format(count))
+    print('  異常箇所：{0} 平均勤務時間：{1} '.format(best_obj.getEvaluation(), avg_))
+    if best_obj.getErrorLine() != None:
+        for i in best_obj.getErrorLine():
+            print('  異常箇所：{}人目'.format(i+1))
     print('-----'*40)
 
     # 日付を表示
@@ -462,10 +516,25 @@ if __name__=='__main__':
         print('\'{}\''.format(d), end=', ')
     print('\'{}\''.format(days[-1]), end='] Avg: '+ str(avg_) +'\n')
 
-    # シフトを表示
-    for e, shift in enumerate(best_shift):
-        ajust_shift = [ s.rjust(2) for s in shift] 
-        print('{0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME)))
+    # # シフトを表示
+    # for shift in best_shift:
+    #     ajust_shift = [ s.rjust(2) for s in shift] 
+    #     print('{0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME)))
+    # print('-----'*40)
+
+
+    error_line = best_obj.getErrorLine()
+    shift_data = best_obj.getWidthShift()
+    ajust_shift = [[ s.rjust(2) for s in shift ] for shift in shift_data]
+    color_shift_data = [[ Color.YELLOW + s + Color.END for s in shift ] if i in error_line else [ s for s in shift ] for i, shift in enumerate(ajust_shift) ]
+    for i, shift in enumerate(color_shift_data):
+        print('[', end="")
+        for s in shift[:-1]:
+            print('\'{}\''.format(s), end=', ')
+        print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
+
     print('-----'*40)
+
+
 
 ######################################################################################## test
