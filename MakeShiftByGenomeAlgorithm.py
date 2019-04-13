@@ -1,6 +1,8 @@
 ######################################################################################## import
 import random
 from decimal import *
+import time
+import datetime
 ######################################################################################## class
 
 class GenomShift:
@@ -160,28 +162,20 @@ def crossover(red, blue, day_length):
 
 # 評価・審査
 def evaluate(obj, max_consecutive_work):
-    '''
+    
     ### 禁止事項 ###
-    ・N連続勤務
-    ・夜勤明けに日勤（夜勤後は必ず休み）
+    # ・N連続勤務
+    # ・夜勤明けに日勤（夜勤後は必ず休み）
 
-    #### 上記整理 ####
-    # N連続勤務 #
-    'X' = 休み
-    width_shiftを使用
-    ['A','C','A','A','C','A','C'.......] work_cnt = 7
-    ['A','C','X','A','C','X','C'.......] work_cnt = 1
-
-    # 夜勤明けに日勤 #
-    'B' = 夜勤
-    夜勤明けに日勤の場合 += 1
-    width_shiftを使用
-    ['B','X','B','A','B','C','X'.......] = 2
-    '''
+    # 評価値を格納
     point = 0
 
-    ### N連続勤務判定 ### 
-    # 評価値
+    ### N連続勤務 ###
+    # 'X' = 休み
+    # width_shiftを使用
+    # ['A','C','A','A','C','A','C'.......] work_cnt = 7
+    # ['A','C','X','A','C','X','C'.......] work_cnt = 1
+    # P = 評価値
     P = 1
     for shift in obj.getWidthShift():
         work_cnt = 0
@@ -196,7 +190,11 @@ def evaluate(obj, max_consecutive_work):
                 work_cnt += 1
 
     ### 夜勤明けに日勤（夜勤後は必ず休み） ###
-    # 評価値
+    # 'B' = 夜勤
+    # 夜勤明けに日勤の場合 += 1
+    # width_shiftを使用
+    # ['B','X','B','A','B','C','X'.......] = 2
+    # P = 評価値
     P = 1
     for shift in obj.getWidthShift():
         for i in range(len(shift)):
@@ -218,9 +216,11 @@ def mutation(objects, individual_mutation, day_mutation):
     
     mutant_objects = []
     for obj in objects:
+        # 100分の　im の確率で変異対象とする
         if im > (random.randint(0, 100) / Decimal(100)):
             mutant_shift = []
             for shift in obj.getLengthShift():
+                # 100分の　dm の確率でその日を変異対象とする
                 if dm > (random.randint(0, 100) / Decimal(100)):
                     shift = random.sample(shift, len(shift))
                     mutant_shift.append(shift)
@@ -235,13 +235,14 @@ def mutation(objects, individual_mutation, day_mutation):
 def create_new_objects(objects, elite_objects, cross_objects):
     sorted_objects = sorted(objects, reverse=True, key=lambda u:u.evaluation)
     
+    # 新世代 = 現世代 - (エリート数 + 交叉数) + エリート + 交叉
+    # 100 = 100 - (30 + 60) + 30 + 60
     n = len(elite_objects) + len(cross_objects)
     for i in range(n):
         sorted_objects.pop(0)
     sorted_objects.extend(elite_objects)
     sorted_objects.extend(cross_objects)
     return sorted_objects
-
 
 '''
 # 1人１日希望休の申請 #
@@ -274,10 +275,14 @@ def take_rest(obj, off_day):
 # 1人の勤務時間の合計を返す
 def count_work_time(shift, work_time):
     # work_times
-    wt = 0
-    for s in shift:
-        wt += work_time[s]
-    return wt 
+    # wt = 0
+    # for s in shift:
+    #     wt += work_time[s]
+    # return wt
+
+    # work_times
+    wt = [ work_time[s] for s in shift ]
+    return sum(wt)
 
 # 勤務時間を評価
 def evaluate_work_time(obj, work_time):
@@ -293,7 +298,7 @@ def evaluate_work_time(obj, work_time):
 
     for shift in obj.getWidthShift():
         cwt = count_work_time(shift, work_time)
-        if (avg_ + min_max) <= cwt or (avg_ - min_max) >= cwt:
+        if int(avg_ + min_max) <= cwt or int(avg_ - min_max) >= cwt:
             point += P
     m = obj.getEvaluation()
     obj.setEvaluation(m + point)
@@ -310,6 +315,7 @@ def add_holiday_shift(obj, holiday_shift_pattern, when_is_holiday):
     for wh in wih:
         shift_data[ wh - 1 ] = random.sample(hsp, len(hsp))
     obj.setLengthShift(shift_data)
+
     return obj
 
 ############################################## 作成中
@@ -370,8 +376,8 @@ WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
-# 希望休 # 1人１日まで # 人数分、当日の休日数以上入力不可 # 左から１人目
-OFF_DAY         = [1,1,6, 6,6,6, 6,6,]
+# 希望休 # 1人１日まで # 人数と当日の休日数は以上入力不可 # 左から１人目
+OFF_DAY         = [1,1,5, 8,19,20, 3,28,]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -384,16 +390,20 @@ ELITE_LENGTH     = 30
 # シフト数
 MAX_SHIFT_LENDTH = 100
 # 繰り返し世代数（制限ありの場合）
-MAX_GENERATION   = 5000
+MAX_GENERATION   = 100000
 # 変異確率
 INDIVIDUAL_MUTATION = 0.5
 # 日別変異確率
 DAY_MUTATION = 0.1
 # 諦め （設定必須）
-MAX_CONTINUE = 2000
+MAX_CONTINUE = 5000
 ######################################################################################## main
 
 if __name__=='__main__':
+    # 処理時間を測定
+    t1 = time.time()
+    # dt1 = datetime.datetime.now()
+
     objects       = []
     elite_objects = []
     cross_objects = []
@@ -413,12 +423,12 @@ if __name__=='__main__':
     # 世代交代開始 ############################################
 
     # 世代交代（制限なし）
-    count = 0
-    while True:
-        count += 1
+    # count = 0
+    # while True:
+    #     count += 1
 
     # 世代交代（制限あり）
-    # for count in range(1, MAX_GENERATION + 1):
+    for count in range(1, MAX_GENERATION + 1):
 
         # エリート選択
         elite_objects = select(objects, ELITE_LENGTH)
@@ -472,13 +482,13 @@ if __name__=='__main__':
             last_min = min_
 
         # 中間結果
-        if count % 100 == 0 or count == 1:
-            print("-----第{}世代の結果-----".format(count))
-            print("  Min:{}".format(min_))
-            print("  Max:{}".format(max_))
-            print("  Avg:{}".format(avg_))
-            print('  Cnt:{}'.format(same_cnt))
-        
+        # if count % 1000 == 0 or count == 1:
+        print("-----第{}世代の結果-----".format(count))
+        print("  Min:{}".format(min_))
+        print("  Max:{}".format(max_))
+        print("  Avg:{}".format(avg_))
+        print('  Cnt:{}'.format(same_cnt))
+    
 
     # 世代交代終了 ############################################
 
@@ -496,7 +506,7 @@ if __name__=='__main__':
     print('===========================================')
 
     # 日付を作成
-    days       = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
+    days = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
     
     # 土日祝日へ色付け
     # color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
@@ -515,6 +525,7 @@ if __name__=='__main__':
 
     print('-----第{}世代の結果-----'.format(count))
     print('  減点箇所：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(avg_) ))
+    
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
             print('  要修正：{}人目'.format(i+1))
@@ -543,10 +554,13 @@ if __name__=='__main__':
     #     for s in shift[:-1]:
     #         print('\'{}\''.format(s), end=', ')
     #     print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
-
     # print('-----'*40)
 
-
-
+    # 処理後の時刻を表示
+    t2 = time.time()
+    tm = t2-t1
+    print('  処理時間：{}s'.format(round(tm, 2)))
+    # dt2 = datetime.datetime.now()
+    # print('  処理時間：{}'.format(dt2-dt1))
 
 ######################################################################################## test
