@@ -504,7 +504,7 @@ if __name__=='__main__':
     best_obj = whereis_error_night_work(best_obj, NIGHT, REST)
 
     print('-----第{}世代の結果-----'.format(count))
-    print('  異常箇所：{0} 平均勤務時間：{1} '.format(best_obj.getEvaluation(), avg_))
+    print('  減点箇所：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), avg_))
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
             print('  異常箇所：{}人目'.format(i+1))
@@ -516,24 +516,26 @@ if __name__=='__main__':
         print('\'{}\''.format(d), end=', ')
     print('\'{}\''.format(days[-1]), end='] Avg: '+ str(avg_) +'\n')
 
-    # # シフトを表示
-    # for shift in best_shift:
-    #     ajust_shift = [ s.rjust(2) for s in shift] 
-    #     print('{0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME)))
+    # シフトを表示
+    for shift in best_shift:
+        ajust_shift = [ s.rjust(2) for s in shift] 
+        print('{0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME)))
+    print('-----'*40)
+
+
+    # # シフト表示（色付き）
+    # error_line = best_obj.getErrorLine()
+    # shift_data = best_obj.getWidthShift()
+    # ajust_shift = [[ s.rjust(2) for s in shift ] for shift in shift_data]
+    # color_shift_data = [[ Color.YELLOW + s + Color.END for s in shift ] if i in error_line else [ s for s in shift ] for i, shift in enumerate(ajust_shift) ]
+    # for i, shift in enumerate(color_shift_data):
+    #     print('[', end="")
+    #     for s in shift[:-1]:
+    #         print('\'{}\''.format(s), end=', ')
+    #     print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
+
     # print('-----'*40)
 
-
-    error_line = best_obj.getErrorLine()
-    shift_data = best_obj.getWidthShift()
-    ajust_shift = [[ s.rjust(2) for s in shift ] for shift in shift_data]
-    color_shift_data = [[ Color.YELLOW + s + Color.END for s in shift ] if i in error_line else [ s for s in shift ] for i, shift in enumerate(ajust_shift) ]
-    for i, shift in enumerate(color_shift_data):
-        print('[', end="")
-        for s in shift[:-1]:
-            print('\'{}\''.format(s), end=', ')
-        print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
-
-    print('-----'*40)
 
 
 
