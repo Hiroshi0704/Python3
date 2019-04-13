@@ -6,17 +6,17 @@ from decimal import *
 class GenomShift:
 
     ### length_shift
-    # [0,0,0,0,0] day 1
+    # [0,0,0,0,0] 1日目
     # ...
     # ...
-    # [0,0,0,0,0] day last
+    # [0,0,0,0,0] N日目
     length_shift = None
 
     ### width_shift
-    # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] staff 1
+    # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] 1人目
     # ...
     # ...
-    # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] staff last
+    # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] N人目
     width_shift = None
 
     ### evaluation = integer型 数値が低いほど高評価
@@ -135,6 +135,8 @@ def select(objects, elite_length):
     selected_objects = random.sample(objects, elite_length*2)
     sorted_objects   = sorted(selected_objects, reverse=False, key=lambda u: u.evaluation)
     elite_objects    = [ sorted_objects.pop(0) for i in range(elite_length) ]
+    # elite_objects をランダムに抽出
+    elite_objects = random.sample(elite_objects, len(elite_objects))
     # '''
     return elite_objects
 
@@ -172,9 +174,9 @@ def evaluate(obj, max_consecutive_work):
 
     # 夜勤明けに日勤 #
     'B' = 夜勤
-    夜勤明けに日勤の場合 += 2
+    夜勤明けに日勤の場合 += 1
     width_shiftを使用
-    ['B','X','B','A','B','C','X'.......] += 4
+    ['B','X','B','A','B','C','X'.......] = 2
     '''
     point = 0
 
@@ -251,12 +253,20 @@ length_shiftを使用
 def take_rest(obj, off_day):
 
     shift = obj.getLengthShift()
+    # staff = 従業員の番号 # day = 希望日
     for staff, day in enumerate(off_day):
+        # 従業員の希望日が休みでない場合
         if shift[day - 1][staff] != REST:
+            # 希望日のシフトの中から休みの人を探す # i = 従業員の番号 # s = 'A','B','C','X' など
             for i, s in enumerate(shift[day - 1]):
+                # 本人はスキップする
                 if i == staff: continue
+                # 他の従業員が休みの場合
                 if s == REST:
-                    shift[day - 1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+                    # 休みの人が希望休でない場合 # off_day[i] = i番目の従業員の希望休の日
+                    if off_day[i] != day:
+                    # 希望休の人と休みの人を交換する 
+                        shift[day - 1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
     
     obj.setLengthShift(shift)
     return obj
@@ -350,18 +360,18 @@ def add_error_line_color(error_line, shift_data, color):
 
 
 ######################################################################################## setting
-################################### ユーザ指定項目
+################################### ユーザ指定項目 # 検索キーワード [ ffffffffffffffffffffff ]
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'C','X','X', 'B','X']
+WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'B','X','X', 'C','C',]
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'X','X','X', 'B','X']
+HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'B','X','X', 'X','X',]
 # 勤務時間
 WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
-# 希望休
-OFF_DAY         = [1,5,8, 12,16,20, 25,28]
+# 希望休 # 1人１日まで # 人数分、当日の休日数以上入力不可 # 左から１人目
+OFF_DAY         = [1,1,6, 6,6,6, 6,6,]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -373,24 +383,15 @@ MAX_CONSECUTIVE_WORK = 5
 ELITE_LENGTH     = 30
 # シフト数
 MAX_SHIFT_LENDTH = 100
-# 繰り返し世代数
+# 繰り返し世代数（制限ありの場合）
 MAX_GENERATION   = 5000
 # 変異確率
 INDIVIDUAL_MUTATION = 0.5
 # 日別変異確率
 DAY_MUTATION = 0.1
-# 諦め
-MAX_CONTINUE = 1500
+# 諦め （設定必須）
+MAX_CONTINUE = 2000
 ######################################################################################## main
-
-### 命名ルール ###
-# クラス複数 = objects
-# クラス単体 = obj
-# シフト２次配列時 = shift_data -> shift_data[0] = shift
-# シフト１次配列時 = shift -> shift[0] = s
-# シフト内容 = s -> s = 'A'
-# 簡易変数 = m
-#####
 
 if __name__=='__main__':
     objects       = []
@@ -409,9 +410,16 @@ if __name__=='__main__':
     # 勤務時間を評価
     objects = [ evaluate_work_time(obj, WORK_TIME) for obj in objects ]
 
-    # 世代交代開始 ############################################ for
-    for count in range(1, MAX_GENERATION + 1):
-        
+    # 世代交代開始 ############################################
+
+    # 世代交代（制限なし）
+    count = 0
+    while True:
+        count += 1
+
+    # 世代交代（制限あり）
+    # for count in range(1, MAX_GENERATION + 1):
+
         # エリート選択
         elite_objects = select(objects, ELITE_LENGTH)
         
@@ -470,9 +478,9 @@ if __name__=='__main__':
             print("  Max:{}".format(max_))
             print("  Avg:{}".format(avg_))
             print('  Cnt:{}'.format(same_cnt))
-            
+        
 
-    # 世代交代終了 ############################################ endfor
+    # 世代交代終了 ############################################
 
     print('\n=== 設定 =================================')
     print('  日数　　　　　: {}'.format(DAY_LENGTH))
@@ -489,8 +497,10 @@ if __name__=='__main__':
 
     # 日付を作成
     days       = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
-    color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
-    days       = color_days
+    
+    # 土日祝日へ色付け
+    # color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
+    # days       = color_days
     
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
@@ -504,22 +514,22 @@ if __name__=='__main__':
     best_obj = whereis_error_night_work(best_obj, NIGHT, REST)
 
     print('-----第{}世代の結果-----'.format(count))
-    print('  減点箇所：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), avg_))
+    print('  減点箇所：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(avg_) ))
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
-            print('  異常箇所：{}人目'.format(i+1))
+            print('  要修正：{}人目'.format(i+1))
     print('-----'*40)
 
     # 日付を表示
-    print('[', end='')
+    print('{} ['.format(str('-').rjust(2)), end='')
     for d in days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(avg_) +'\n')
+    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(avg_)) +'\n')
 
     # シフトを表示
-    for shift in best_shift:
+    for i, shift in enumerate(best_shift):
         ajust_shift = [ s.rjust(2) for s in shift] 
-        print('{0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME)))
+        print('{2} {0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME), str(i+1).rjust(2)))
     print('-----'*40)
 
 
