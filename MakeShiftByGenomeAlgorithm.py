@@ -6,16 +6,28 @@ import datetime
 ######################################################################################## setting
 ################################################ ユーザ指定項目
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','A','A', 'B','X','X', 'C','C',]
+WEEKDAY_SHIFT_PATTERN = [
+    'A','A','A','A','A',
+    'B','B','X','X','X',
+    'X','X','X',
+    ]
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','X','X', 'B','X','X', 'X','X',]
+HOLIDAY_SHIFT_PATTERN = [
+    'A','A','X','X','X',
+    'B','B','X','X','X',
+    'X','X','X',
+    ]
 # 勤務時間
 WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
 # 希望休 # 1人１日まで # 人数と当日の休日数は以上入力不可 # 左から１人目
-OFF_DAY         = [1,1,5, 8,19,20, 3,28,]
+OFF_DAY         = [
+    1,2,3,4,5,
+    6,7,8,9,10,
+    11,12,13
+    ]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -28,7 +40,7 @@ ELITE_LENGTH     = 20
 # シフト数
 MAX_SHIFT_LENDTH = 100
 # 繰り返し世代数（制限ありの場合）
-MAX_GENERATION   = 10000
+MAX_GENERATION   = 100000
 # 変異確率
 INDIVIDUAL_MUTATION = 0.5
 # 日別変異確率
