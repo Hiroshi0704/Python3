@@ -567,7 +567,7 @@ if __name__=='__main__':
     ajust_shift = [[ s.rjust(2) for s in shift ] for shift in shift_data]
     color_shift_data = [[ Color.YELLOW + s + Color.END for s in shift ] if i in error_line else [ s for s in shift ] for i, shift in enumerate(ajust_shift) ]
     for i, shift in enumerate(color_shift_data):
-        print(' {} ['.format(str(i+1)).rjust(2), end="")
+        print('{} ['.format(str(i+1).rjust(2)), end="")
         for s in shift[:-1]:
             print('\'{}\''.format(s), end=', ')
         print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
