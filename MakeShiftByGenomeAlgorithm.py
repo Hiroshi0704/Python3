@@ -71,8 +71,8 @@ class GenomShift:
             width_shift.append(m)
         '''
         # 上記の内包表記
-        # width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
-        width_shift = [ x[::-1] for x in zip(*self.length_shift)]
+        width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
+        # width_shift = [ x[::-1] for x in zip(*self.length_shift)]
         self.width_shift = width_shift
         
     # GET #
@@ -91,12 +91,13 @@ class GenomShift:
     # SET #
     def setLengthShift(self, length_shift):
         self.length_shift = length_shift
-        width_shift       = [ x[::-1] for x in zip(*self.length_shift)]
+        width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
         self.width_shift  = width_shift
     
     def setWidthShift(self, width_shift):
         self.width_shift = width_shift
-        length_shift = [ x[::-1] for x in zip(*self.width_shift)]
+        # length_shift = [ x[::-1] for x in zip(*self.width_shift)]
+        length_shift = [[ l[i] for l in self.width_shift ] for i in range(len(self.width_shift[0])) ]
         self.length_shift = length_shift
 
     def setEvaluation(self, evaluation):
@@ -261,22 +262,24 @@ def create_new_objects(objects, elite_objects, cross_objects):
 # [1, 4, 6, 8, 9, 10, 26, 15] ３人目の希望休は６日目となる
 # length_shiftを使用
 # 希望休ではない場合は休みの人と入れ替える
-def take_rest(obj, off_day):
+def take_rest(obj, off_day, rest):
     shift = obj.getLengthShift()
     # staff = 従業員の番号 # day = 希望日
     for staff, day in enumerate(off_day):
         # 従業員の希望日が休みでない場合
-        if shift[day - 1][staff] != REST:
+        if shift[day - 1][staff] != rest:
             # 希望日のシフトの中から休みの人を探す # i = 従業員の番号 # s = 'A','B','C','X' など
             for i, s in enumerate(shift[day - 1]):
                 # 本人はスキップする
                 if i == staff: continue
                 # 他の従業員が休みの場合
-                if s == REST:
+                if s == rest:
                     # 休みの人が希望休でない場合 # off_day[i] = i番目の従業員の希望休の日
                     if off_day[i] != day:
-                        # 希望休の人と休みの人を交換する 
-                        shift[day - 1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+                        # 希望休の人と休みの人を交換する
+                        shift[day-1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+                        break
+
     obj.setLengthShift(shift)
     return obj
 
@@ -303,7 +306,7 @@ def evaluate_work_time(obj, work_time):
         # １人の勤務時間が平均的かどうか判定
         if int(avg_ + min_max) <= cwt or int(avg_ - min_max) >= cwt:
             # point += P
-            # 規定の範囲外なら、(絶対値(勤務時間 - 平均時間)　/ 100)
+            # 規定の範囲外なら、(絶対値(超えた時間 - 平均時間)　/ 100)
             point += Decimal(abs(cwt - avg_)) / Decimal(100)
             
     m = obj.getEvaluation()
@@ -395,7 +398,7 @@ if __name__=='__main__':
         # 変異
         new_objects = mutation(new_objects, INDIVIDUAL_MUTATION, DAY_MUTATION)
         # 希望休をとる
-        new_objects = ( take_rest(obj, OFF_DAY) for obj in new_objects )
+        new_objects = ( take_rest(obj, OFF_DAY, REST) for obj in new_objects )
         # 評価
         new_objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK, REST, NIGHT) for obj in new_objects )
         # 勤務時間を評価
