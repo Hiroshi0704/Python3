@@ -303,8 +303,8 @@ def evaluate_work_time(obj, work_time):
         # １人の勤務時間が平均的かどうか判定
         if int(avg_ + min_max) <= cwt or int(avg_ - min_max) >= cwt:
             # point += P
-            # 規定の範囲外なら、(絶対値(超えた時間 - 平均時間)　/ 10)
-            point += Decimal(abs(cwt - avg_)) / Decimal(10)
+            # 規定の範囲外なら、(絶対値(超えた時間 - 平均時間)　/ 100)
+            point += Decimal(abs(cwt - avg_)) / Decimal(100)
             
     m = obj.getEvaluation()
     obj.setEvaluation(m + point)
