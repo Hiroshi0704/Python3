@@ -34,7 +34,7 @@ INDIVIDUAL_MUTATION = 0.5
 # 日別変異確率
 DAY_MUTATION = 0.08
 # 諦め （設定必須）
-MAX_CONTINUE = 10000
+MAX_CONTINUE = 8000
 ######################################################################################## class
 class GenomShift:
     ### length_shift
@@ -435,12 +435,12 @@ if __name__=='__main__':
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
     best_obj       = sorted_objects[0]
-    # エラー箇所を取得
-    best_obj       = whereis_error_work_time(best_obj, WORK_TIME, avg_)
-    best_obj       = whereis_error_night_work(best_obj, NIGHT, REST)
     # 勤務時間の平均値を取得
     m    = [ count_work_time(shift, WORK_TIME) for shift in best_obj.getWidthShift() ]
-    avg_ = sum(m) / len(m)
+    work_time_avg = sum(m) / len(m)
+    # エラー箇所を取得
+    best_obj       = whereis_error_work_time(best_obj, WORK_TIME, work_time_avg)
+    best_obj       = whereis_error_night_work(best_obj, NIGHT, REST)
     # 日付を作成
     days = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
     # 設定値を表示
@@ -458,7 +458,7 @@ if __name__=='__main__':
     print('===========================================')
     # 最優秀シフトの情報を表示
     print('-----第{}世代の結果-----'.format(count))
-    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(avg_) ))
+    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(work_time_avg) ))
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
             print('  要修正：{}人目'.format(i+1))
@@ -468,7 +468,7 @@ if __name__=='__main__':
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(avg_)) +'\n')
+    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
 
     # シフトを表示
     for i, shift in enumerate(best_obj.getWidthShift()):
@@ -481,7 +481,7 @@ if __name__=='__main__':
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in color_days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(avg_)) +'\n')
+    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
 
     # シフト表示（色付き）
     error_line = best_obj.getErrorLine()
