@@ -43,36 +43,24 @@ class GenomShift:
     # ...
     # [0,0,0,0,0] N日目
     length_shift = None
-
+    
     ### width_shift
     # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] 1人目
     # ...
     # ...
     # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] N人目
     width_shift = None
-
+    
     ### evaluation = integer型 数値が低いほど高評価
     evaluation = 0
-
+    
     ### 不良箇所のインデックスを格納　width_shift型
     error_line = []
-
+    
     def __init__(self, length_shift, evaluation):
         self.length_shift = length_shift
         self.evaluation   = evaluation
-        # width_shiftへ変換
-        '''
-        width_shift = []
-        for i in range(len(self.length_shift[0])):
-            m = []
-            for l in self.length_shift:
-                m.append(l[i])
-            m = [ l[i] for l in self.length_shift ]
-            width_shift.append(m)
-        '''
-        # 上記の内包表記
         width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
-        # width_shift = [ x[::-1] for x in zip(*self.length_shift)]
         self.width_shift = width_shift
         
     # GET #
@@ -96,7 +84,6 @@ class GenomShift:
     
     def setWidthShift(self, width_shift):
         self.width_shift = width_shift
-        # length_shift = [ x[::-1] for x in zip(*self.width_shift)]
         length_shift = [[ l[i] for l in self.width_shift ] for i in range(len(self.width_shift[0])) ]
         self.length_shift = length_shift
 
@@ -120,8 +107,6 @@ class Color:
     UNDERLINE = '\033[4m'
     INVISIBLE = '\033[08m'
     REVERCE   = '\033[07m'
-
-
 ######################################################################################## def
 ### 命名ルール ###
 # クラス複数 = objects
@@ -140,7 +125,6 @@ def create(weekday_shift_pattern, day_length):
         wp = weekday_shift_pattern
         ls = [i for i in random.sample(wp, len(wp))]
         length_shift.append(ls)
-        
     return GenomShift(length_shift, 0)
 
 # エリートを選択する
@@ -156,8 +140,8 @@ def select(objects, elite_length):
     elite_objects    = [sorted_objects.pop(0) for i in range(elite_length)]
     # elite_objects をランダムに抽出
     elite_objects    = random.sample(elite_objects, len(elite_objects))
-    
     return elite_objects
+
 
 # 一点交叉
 def crossover(red, blue, day_length):
@@ -177,13 +161,8 @@ def crossover(red, blue, day_length):
 
 # 評価・審査
 def evaluate(obj, max_consecutive_work, rest, night):
-    ### 禁止事項 ###
-    # ・N連続勤務
-    # ・夜勤明けに日勤（夜勤後は必ず休み）
-
     # 評価値を格納
     point = 0
-
     ### N連続勤務 ###
     # 'X' = 休み
     # width_shiftを使用
@@ -202,7 +181,6 @@ def evaluate(obj, max_consecutive_work, rest, night):
             if work_cnt > max_consecutive_work:
                 point += P
                 continue
-
     ### 夜勤明けに日勤（夜勤後は必ず休み） ###
     # 'B' = 夜勤
     # 夜勤明けに日勤の場合 += 1
@@ -226,7 +204,6 @@ def mutation(objects, individual_mutation, day_mutation):
     # 変数名省略
     im = individual_mutation
     dm = day_mutation
-    
     mutant_objects = []
     for obj in objects:
         # 100分の　im の確率で変異対象とする
@@ -243,7 +220,6 @@ def mutation(objects, individual_mutation, day_mutation):
         else:
             mutant_objects.append(obj)
     return mutant_objects
-
 
 # 新たな世代を作成
 def create_new_objects(objects, elite_objects, cross_objects):
@@ -279,9 +255,9 @@ def take_rest(obj, off_day, rest):
                         # 希望休の人と休みの人を交換する
                         shift[day-1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
                         break
-
     obj.setLengthShift(shift)
     return obj
+
 
 # 1人の勤務時間の合計を返す
 def count_work_time(shift, work_time):
@@ -295,8 +271,8 @@ def evaluate_work_time(obj, work_time):
     P     = 1
     point = 0
     # Avg ± N
-    min_max = 2
-
+    min_max = 1
+    
     m    = [ count_work_time(shift, work_time) for shift in obj.getWidthShift() ]
     avg_ = sum(m) / len(m)
 
@@ -304,11 +280,10 @@ def evaluate_work_time(obj, work_time):
         # １人の勤務時間を取得
         cwt = count_work_time(shift, work_time)
         # １人の勤務時間が平均的かどうか判定
-        if int(avg_ + min_max) <= cwt or int(avg_ - min_max) >= cwt:
+        if abs(cwt - int(avg_)) > min_max:
             # point += P
-            # 規定の範囲外なら、(絶対値(超えた時間 - 平均時間)　/ 100)
-            point += Decimal(abs(cwt - avg_)) / Decimal(100)
-            
+            # 規定の範囲外なら、(絶対値(勤務時間 - 平均時間 + 閾値)　/ 100)
+            point += Decimal(abs(cwt - int(avg_ + min_max))) / Decimal(100)
     m = obj.getEvaluation()
     obj.setEvaluation(m + point)
     return obj
@@ -411,7 +386,6 @@ if __name__=='__main__':
         min_ = min(fits)
         max_ = max(fits)
         avg_ = sum(fits) / Decimal(len(fits))
-
         ### 最小値を比較 ###
         if last_min == None: last_min = min_
         # 最小評価値が０になったら終了
@@ -466,26 +440,22 @@ if __name__=='__main__':
         for i in best_obj.getErrorLine():
             print('  要修正：{}人目'.format(i+1))
     print('-------------------------------------------'*4)
-
     # 日付を表示
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in days[:-1]:
         print('\'{}\''.format(d), end=', ')
     print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
-
     # シフトを表示
     for i, shift in enumerate(best_obj.getWidthShift()):
         ajust_shift = [ s.rjust(2) for s in shift] 
         print('{2} {0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME), str(i+1).rjust(2)))
     print('-------------------------------------------'*4)
-
     # 土日祝日へ色付け
     color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in color_days[:-1]:
         print('\'{}\''.format(d), end=', ')
     print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
-
     # シフト表示（色付き）
     error_line = best_obj.getErrorLine()
     shift_data = best_obj.getWidthShift()
@@ -497,7 +467,6 @@ if __name__=='__main__':
             print('\'{}\''.format(s), end=', ')
         print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
     print('-------------------------------------------'*4)
-
     # シフト表示（CSV）
     for i, shift in enumerate(best_obj.getWidthShift()):
         print(' ', end='')
@@ -505,7 +474,6 @@ if __name__=='__main__':
             print('{}, '.format(s), end='')
         print('{}'.format(count_work_time(shift, WORK_TIME)))
     print('-------------------------------------------'*4)
-    
     # 処理後の時刻を表示
     t2 = time.time()
     tm = t2-t1
@@ -513,5 +481,4 @@ if __name__=='__main__':
     dt2 = datetime.datetime.now()
     date = dt2-dt1
     print('  処理時間：{}'.format(str(date)[:-7]))
-
 ######################################################################################## test
