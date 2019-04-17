@@ -303,7 +303,7 @@ def evaluate_work_time(obj, work_time, work_avg):
         # １人の勤務時間を取得
         cwt = count_work_time(shift, work_time)
         # 規定の範囲外なら、(絶対値(勤務時間 - 平均時間 + 閾値)　/ 100)
-        point += Decimal(abs(cwt - int(work_avg))) / Decimal(100)
+        point += Decimal(abs(cwt - round(work_avg,1))) / Decimal(100)
     m = obj.getEvaluation()
     obj.setEvaluation(m + point)
     return obj
@@ -320,14 +320,14 @@ def add_holiday_shift(obj, holiday_shift_pattern, when_is_holiday):
     return obj
 ############################################## 作成中
 # 不良箇所を特定 勤務時間を判定
-def whereis_error_work_time(obj, work_time, avg_):
+def whereis_error_work_time(obj, work_time, work_avg):
     min_max = 5
     error_line = obj.getErrorLine()
     for i, shift in enumerate(obj.getWidthShift()):
         tal = 0
         for s in shift:
             tal += work_time[s]
-        if abs(tal - avg_) > min_max:
+        if abs(tal - work_avg) > min_max:
             if i not in error_line:
                 error_line.append(i)
     obj.setErrorLine(error_line)
@@ -460,7 +460,7 @@ if __name__=='__main__':
     print('===========================================')
     # 最優秀シフトの情報を表示
     print('-----第{}世代の結果-----'.format(count))
-    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(WORK_AVG) ))
+    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), round(WORK_AVG,1) ))
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
             print('  要修正：{}人目'.format(i+1))
@@ -469,7 +469,7 @@ if __name__=='__main__':
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(WORK_AVG)) +'\n')
+    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(round(WORK_AVG,1)) +'\n')
     # シフトを表示
     for i, shift in enumerate(best_obj.getWidthShift()):
         ajust_shift = [ s.rjust(2) for s in shift] 
@@ -480,7 +480,7 @@ if __name__=='__main__':
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in color_days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(WORK_AVG)) +'\n')
+    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(round(WORK_AVG,1)) +'\n')
     # シフト表示（色付き）
     error_line = best_obj.getErrorLine()
     shift_data = best_obj.getWidthShift()
