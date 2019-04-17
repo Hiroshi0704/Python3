@@ -142,7 +142,6 @@ def select(objects, elite_length):
     elite_objects    = random.sample(elite_objects, len(elite_objects))
     return elite_objects
 
-
 # 一点交叉
 def crossover(red, blue, day_length):
     # cp = cross_point 交叉位置
@@ -257,33 +256,24 @@ def take_rest(obj, off_day, rest):
                         break
     obj.setLengthShift(shift)
     return obj
-
-
+    
 # 1人の勤務時間の合計を返す
 def count_work_time(shift, work_time):
     wt = [ work_time[s] for s in shift ]
     return sum(wt)
 
 # 勤務時間を評価
-def evaluate_work_time(obj, work_time):
+def evaluate_work_time(obj, work_time, work_avg):
     ### 勤務時間を評価 ###
     # 評価値
     P     = 1
     point = 0
-    # Avg ± N
-    min_max = 1
     
-    m    = [ count_work_time(shift, work_time) for shift in obj.getWidthShift() ]
-    avg_ = sum(m) / len(m)
-
     for shift in obj.getWidthShift():
         # １人の勤務時間を取得
         cwt = count_work_time(shift, work_time)
-        # １人の勤務時間が平均的かどうか判定
-        if abs(cwt - int(avg_)) > min_max:
-            # point += P
-            # 規定の範囲外なら、(絶対値(勤務時間 - 平均時間 + 閾値)　/ 100)
-            point += Decimal(abs(cwt - int(avg_ + min_max))) / Decimal(100)
+        # 規定の範囲外なら、(絶対値(勤務時間 - 平均時間 + 閾値)　/ 100)
+        point += Decimal(abs(cwt - int(work_avg))) / Decimal(100)
     m = obj.getEvaluation()
     obj.setEvaluation(m + point)
     return obj
@@ -312,6 +302,7 @@ def whereis_error_work_time(obj, work_time, avg_):
                 error_line.append(i)
     obj.setErrorLine(error_line)
     return obj
+    
 # 不良箇所を特定 夜勤明けを判定
 def whereis_error_night_work(obj, night, rest):
     error_line = obj.getErrorLine()
@@ -325,6 +316,7 @@ def whereis_error_night_work(obj, night, rest):
 # 不良箇所を特定 連続勤務を判定
 def whereis_error_consentive_work():
     pass
+
 # 不良箇所に色付け
 def add_error_line_color(error_line, shift_data, color):
     color_shift_data = []
@@ -335,7 +327,6 @@ def add_error_line_color(error_line, shift_data, color):
             color_shift = [ s for s in shift ]
         color_shift_data.append(color_shift)
     return color_shift_data
-    
 ############################################## 作成中
 ######################################################################################## main
 if __name__=='__main__':
@@ -347,11 +338,15 @@ if __name__=='__main__':
     same_cnt = 0
     # 初期状態
     objects = ( create(WEEKDAY_SHIFT_PATTERN, DAY_LENGTH) for i in range(MAX_SHIFT_LENDTH) )
-    objects = ( add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects )
+    objects = [ add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects ]
+    # 平均勤務時間を取得
+    m    = [ count_work_time(shift, WORK_TIME) for shift in objects[0].getWidthShift() ]
+    WORK_AVG = sum(m) / len(m)
     # 評価
     objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK, REST, NIGHT) for obj in objects )
     # 勤務時間を評価
-    objects = [ evaluate_work_time(obj, WORK_TIME) for obj in objects ]
+    objects = [ evaluate_work_time(obj, WORK_TIME, WORK_AVG) for obj in objects ]
+    
     # 世代交代開始 ############################################################
     
     # 世代交代（制限なし）
@@ -377,7 +372,7 @@ if __name__=='__main__':
         # 評価
         new_objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK, REST, NIGHT) for obj in new_objects )
         # 勤務時間を評価
-        new_objects = [ evaluate_work_time(obj, WORK_TIME) for obj in new_objects ]
+        new_objects = [ evaluate_work_time(obj, WORK_TIME, WORK_AVG) for obj in new_objects ]
         # 現行と新世代を入れ替え
         objects = new_objects
         
@@ -412,11 +407,11 @@ if __name__=='__main__':
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
     best_obj       = sorted_objects[0]
-    # 勤務時間の平均値を取得
-    m    = [ count_work_time(shift, WORK_TIME) for shift in best_obj.getWidthShift() ]
-    work_time_avg = sum(m) / len(m)
+    # # 勤務時間の平均値を取得
+    # m    = [ count_work_time(shift, WORK_TIME) for shift in best_obj.getWidthShift() ]
+    # work_time_avg = sum(m) / len(m)
     # エラー箇所を取得
-    best_obj       = whereis_error_work_time(best_obj, WORK_TIME, work_time_avg)
+    best_obj       = whereis_error_work_time(best_obj, WORK_TIME, WORK_AVG)
     best_obj       = whereis_error_night_work(best_obj, NIGHT, REST)
     # 日付を作成
     days = [ str(i).rjust(2) for i in range(1,DAY_LENGTH+1) ]
@@ -435,7 +430,7 @@ if __name__=='__main__':
     print('===========================================')
     # 最優秀シフトの情報を表示
     print('-----第{}世代の結果-----'.format(count))
-    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(work_time_avg) ))
+    print('  減点：{0}  平均勤務時間：{1} '.format(best_obj.getEvaluation(), int(WORK_AVG) ))
     if best_obj.getErrorLine() != None:
         for i in best_obj.getErrorLine():
             print('  要修正：{}人目'.format(i+1))
@@ -444,18 +439,18 @@ if __name__=='__main__':
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
+    print('\'{}\''.format(days[-1]), end='] Avg: '+ str(int(WORK_AVG)) +'\n')
     # シフトを表示
     for i, shift in enumerate(best_obj.getWidthShift()):
         ajust_shift = [ s.rjust(2) for s in shift] 
         print('{2} {0} Tal: {1}'.format(ajust_shift, count_work_time(shift, WORK_TIME), str(i+1).rjust(2)))
     print('-------------------------------------------'*4)
-    # 土日祝日へ色付け
+    # 日付を表示（色付き）
     color_days = [ Color.RED + d + Color.END if int(d) in WHEN_IS_HOLIDAY else d for d in days ]
     print('{} ['.format(str('-').rjust(2)), end='')
     for d in color_days[:-1]:
         print('\'{}\''.format(d), end=', ')
-    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(work_time_avg)) +'\n')
+    print('\'{}\''.format(color_days[-1]), end='] Avg: '+ str(int(WORK_AVG)) +'\n')
     # シフト表示（色付き）
     error_line = best_obj.getErrorLine()
     shift_data = best_obj.getWidthShift()
