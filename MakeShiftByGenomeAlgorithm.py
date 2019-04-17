@@ -15,7 +15,7 @@ WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 REST  = 'X'
 NIGHT = 'B'
 # 希望休 # 1人１日まで # 人数と当日の休日数は以上入力不可 # 左から１人目
-OFF_DAY         = [1,2,3,4,5, 6,7,8,9,10,11,12,13,]
+OFF_DAY         = [1,2,3,4,5, 6,7,8,]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -73,6 +73,7 @@ class GenomShift:
     def getEvaluation(self):
         return self.evaluation
 
+
     def getErrorLine(self):
         return self.error_line
     
@@ -87,11 +88,14 @@ class GenomShift:
         length_shift = [[ l[i] for l in self.width_shift ] for i in range(len(self.width_shift[0])) ]
         self.length_shift = length_shift
 
+
     def setEvaluation(self, evaluation):
         self.evaluation = evaluation
 
+
     def setErrorLine(self, error_line):
         self.error_line = error_line
+
 
 class Color:
     BLACK     = '\033[30m'
@@ -117,6 +121,7 @@ class Color:
 # 簡易変数 = m
 #####
 
+
 # インスタンスを生成する
 def create(weekday_shift_pattern, day_length):
     length_shift = []
@@ -126,6 +131,7 @@ def create(weekday_shift_pattern, day_length):
         ls = [i for i in random.sample(wp, len(wp))]
         length_shift.append(ls)
     return GenomShift(length_shift, 0)
+
 
 # エリートを選択する
 def select(objects, elite_length):
@@ -142,6 +148,7 @@ def select(objects, elite_length):
     elite_objects    = random.sample(elite_objects, len(elite_objects))
     return elite_objects
 
+
 # 一点交叉
 def crossover(red, blue, day_length):
     # cp = cross_point 交叉位置
@@ -157,6 +164,7 @@ def crossover(red, blue, day_length):
     cross_objects.append(GenomShift(first_shift,0))
     cross_objects.append(GenomShift(second_shift,0))
     return cross_objects
+
 
 # 評価・審査
 def evaluate(obj, max_consecutive_work, rest, night):
@@ -198,6 +206,7 @@ def evaluate(obj, max_consecutive_work, rest, night):
     obj.setEvaluation(point)
     return obj
 
+
 # 変異
 def mutation(objects, individual_mutation, day_mutation):
     # 変数名省略
@@ -220,6 +229,7 @@ def mutation(objects, individual_mutation, day_mutation):
             mutant_objects.append(obj)
     return mutant_objects
 
+
 # 新たな世代を作成
 def create_new_objects(objects, elite_objects, cross_objects):
     sorted_objects = sorted(objects, reverse=True, key=lambda u:u.evaluation)
@@ -231,6 +241,7 @@ def create_new_objects(objects, elite_objects, cross_objects):
     sorted_objects.extend(elite_objects)
     sorted_objects.extend(cross_objects)
     return sorted_objects
+
 
 # # 1人１日希望休の申請 #
 # ８人の場合、８人の希望休をリストへ格納
@@ -261,6 +272,7 @@ def take_rest(obj, off_day, rest):
 def count_work_time(shift, work_time):
     wt = [ work_time[s] for s in shift ]
     return sum(wt)
+
 
 # 勤務時間を評価
 def evaluate_work_time(obj, work_time, work_avg):
@@ -316,6 +328,7 @@ def whereis_error_night_work(obj, night, rest):
 # 不良箇所を特定 連続勤務を判定
 def whereis_error_consentive_work():
     pass
+
 
 # 不良箇所に色付け
 def add_error_line_color(error_line, shift_data, color):
@@ -403,6 +416,7 @@ if __name__=='__main__':
             print("  Avg:{}".format(avg_))
             print('  Cnt:{}'.format(same_cnt))
     # 世代交代終了 ############################################################
+
 
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
