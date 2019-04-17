@@ -268,20 +268,21 @@ def create_new_objects(objects, elite_objects, cross_objects):
 def take_rest(obj, off_day, rest):
     # length_shiftを取得
     shift_data = obj.getLengthShift()
+    sd = shift_data
     # 希望日リストからスタッフインデックスとその人の希望日リストを抽出
     for staf_id, rest_days in enumerate(off_day):
         # 希望日リストの内容を抽出
         for r_day in rest_days:
+            r_day -= 1
             # 希望日が休みでない場合
-            if shift_data[r_day-1][staf_id] != rest:
+            if sd[r_day][staf_id] != rest:
                 # その日の中で他に休みの人を探すために、その日の内容を抽出
-                for other_id, other_day in enumerate(shift_data[r_day-1]):
+                for other_id, other_day in enumerate(sd[r_day]):
                     # 希望日を申請している人はスキップ
                     if other_id == staf_id: continue
                     # 他の人が休みの場合
                     if other_day == rest and r_day not in off_day[other_id]:
-                        shift_data[r_day-1][staf_id], shift_data[r_day-1][other_id] = shift_data[r_day-1][other_id], shift_data[r_day-1][staf_id]
-                        # print(shift_data[r_day-1][staf_id], shift_data[r_day-1][other_id])
+                        sd[r_day][staf_id], sd[r_day][other_id] = sd[r_day][other_id], sd[r_day][staf_id]
                         break
     obj.setLengthShift(shift_data)
     return obj
