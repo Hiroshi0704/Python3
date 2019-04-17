@@ -3,6 +3,7 @@ import random
 from decimal import *
 import time
 import datetime
+import itertools
 ######################################################################################## setting
 ################################################ ユーザ指定項目
 # 平日勤務体制
@@ -14,8 +15,17 @@ WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
-# 希望休 # 1人１日まで # 人数と当日の休日数は以上入力不可 # 左から１人目
-OFF_DAY         = [1,2,3,4,5, 6,7,8,]
+# 希望休 # 人数と当日の休日数は以上入力不可 # 左から１人目
+# OFF_DAY = [
+#     [1,2,3,],[4,5,6,],[7,8,9,],
+#     [10,11,12,],[13,14,15,],[16,17,18,],
+#     [19,20,21,],[22,23,24,],
+# ] ３人目の希望日は７、８、９日となる
+OFF_DAY = [
+    [1,2,3,],[4,5,6,],[7,8,9,],
+    [10,11,12,],[13,14,15,],[16,17,18,],
+    [19,20,21,],[22,23,24,],
+]
 # 土日祝日
 WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
 # 作成する日数
@@ -231,24 +241,47 @@ def create_new_objects(objects, elite_objects, cross_objects):
 # [1, 4, 6, 8, 9, 10, 26, 15] ３人目の希望休は６日目となる
 # length_shiftを使用
 # 希望休ではない場合は休みの人と入れ替える
+# def take_rest(obj, off_day, rest):
+#     shift = obj.getLengthShift()
+#     # staff = 従業員の番号 # day = 希望日
+#     for staff, day in enumerate(off_day):
+#         # 従業員の希望日が休みでない場合
+#         if shift[day - 1][staff] != rest:
+#             # 希望日のシフトの中から休みの人を探す # i = 従業員の番号 # s = 'A','B','C','X' など
+#             for i, s in enumerate(shift[day - 1]):
+#                 # 本人はスキップする
+#                 if i == staff: continue
+#                 # 他の従業員が休みの場合
+#                 if s == rest:
+#                     # 休みの人が希望休でない場合 # off_day[i] = i番目の従業員の希望休の日
+#                     if off_day[i] != day:
+#                         # 希望休の人と休みの人を交換する
+#                         shift[day-1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+#                         break
+#     obj.setLengthShift(shift)
+#     return obj
+
+# # 希望休複数申請 #
+# OFF_DAY = ２次配列
 def take_rest(obj, off_day, rest):
-    shift = obj.getLengthShift()
-    # staff = 従業員の番号 # day = 希望日
-    for staff, day in enumerate(off_day):
-        # 従業員の希望日が休みでない場合
-        if shift[day - 1][staff] != rest:
-            # 希望日のシフトの中から休みの人を探す # i = 従業員の番号 # s = 'A','B','C','X' など
-            for i, s in enumerate(shift[day - 1]):
-                # 本人はスキップする
-                if i == staff: continue
-                # 他の従業員が休みの場合
-                if s == rest:
-                    # 休みの人が希望休でない場合 # off_day[i] = i番目の従業員の希望休の日
-                    if off_day[i] != day:
-                        # 希望休の人と休みの人を交換する
-                        shift[day-1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
+    # length_shiftを取得
+    shift_data = obj.getLengthShift()
+    # 希望日リストからスタッフインデックスとその人の希望日リストを抽出
+    for staf_id, rest_days in enumerate(off_day):
+        # 希望日リストの内容を抽出
+        for r_day in rest_days:
+            # 希望日が休みでない場合
+            if shift_data[r_day-1][staf_id] != rest:
+                # その日の中で他に休みの人を探すために、その日の内容を抽出
+                for other_id, other_day in enumerate(shift_data[r_day-1]):
+                    # 希望日を申請している人はスキップ
+                    if other_id == staf_id: continue
+                    # 他の人が休みの場合
+                    if other_day == rest and r_day not in off_day[other_id]:
+                        shift_data[r_day-1][staf_id], shift_data[r_day-1][other_id] = shift_data[r_day-1][other_id], shift_data[r_day-1][staf_id]
+                        # print(shift_data[r_day-1][staf_id], shift_data[r_day-1][other_id])
                         break
-    obj.setLengthShift(shift)
+    obj.setLengthShift(shift_data)
     return obj
     
 # 1人の勤務時間の合計を返す
