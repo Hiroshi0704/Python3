@@ -78,7 +78,7 @@ class GenomShift:
         self.length_shift = length_shift
         width_shift = [[ l[i] for l in self.length_shift ] for i in range(len(self.length_shift[0])) ]
         self.width_shift  = width_shift
-        def setWidthShift(self, width_shift):
+    def setWidthShift(self, width_shift):
         self.width_shift = width_shift
         length_shift = [[ l[i] for l in self.width_shift ] for i in range(len(self.width_shift[0])) ]
         self.length_shift = length_shift
