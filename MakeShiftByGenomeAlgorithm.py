@@ -416,8 +416,7 @@ if __name__=='__main__':
             print("  Avg:{}".format(avg_))
             print('  Cnt:{}'.format(same_cnt))
     # 世代交代終了 ############################################################
-
-
+    
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
     best_obj       = sorted_objects[0]
