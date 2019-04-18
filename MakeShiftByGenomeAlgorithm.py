@@ -3,13 +3,12 @@ import random
 from decimal import *
 import time
 import datetime
-import itertools
 ######################################################################################## setting
 ################################################ ユーザ指定項目
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','A','A','X','X', 'B','C','X',]
+WEEKDAY_SHIFT_PATTERN = ['A','A','A','B','C','X','X','X',]
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','X','X','X','X', 'B','X','X',]
+HOLIDAY_SHIFT_PATTERN = ['A','B','X','X','X','X','X','X',]
 # 勤務時間
 WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
@@ -27,11 +26,11 @@ OFF_DAY = [
     [1,2,3,],[4,5,6,],[7,8,9,],
     [10,11,12,],[13,14,15,],[16,17,18,],
     [19,20,21,],[22,23,24,],
-]
+] 
 # 土日祝日
-WHEN_IS_HOLIDAY = [6,7, 13,14, 20,21, 27,28]
+WHEN_IS_HOLIDAY = [1,2,3,4,5,6, 11,12, 18,19, 25,26]
 # 作成する日数
-DAY_LENGTH      = 28
+DAY_LENGTH      = 31
 # 禁止連続日数  N日まで
 MAX_CONSECUTIVE_WORK = 5
 ################################################ ユーザ指定項目　ここまで
@@ -253,7 +252,7 @@ def take_rest(obj, off_day, rest):
                 # 希望日を申請している人はスキップ
                 if other_id == staf_id: continue
                 # 他の人が休みの場合
-                if other_day == rest and r_day not in off_day[other_id]:
+                if other_day == rest and r_day+1 not in off_day[other_id]:
                     sd[r_day][staf_id], sd[r_day][other_id] = sd[r_day][other_id], sd[r_day][staf_id]
                     break
     obj.setLengthShift(shift_data)
@@ -343,7 +342,7 @@ if __name__=='__main__':
     objects = [ add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects ]
     # 平均勤務時間を取得
     m    = [ count_work_time(shift, WORK_TIME) for shift in objects[0].getWidthShift() ]
-    WORK_AVG = sum(m) / len(m)
+    WORK_AVG = round(sum(m) / len(m))
     # 評価
     objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK, REST, NIGHT) for obj in objects )
     # 勤務時間を評価
@@ -416,7 +415,8 @@ if __name__=='__main__':
     print('  平日シフト　　: {}'.format(WEEKDAY_SHIFT_PATTERN))
     print('  土日祝日シフト: {}'.format(HOLIDAY_SHIFT_PATTERN))
     print('  土日祝日　　　: {}'.format(WHEN_IS_HOLIDAY))
-    print('  希望休　　　　: {}'.format(OFF_DAY))
+    for e, i in enumerate(OFF_DAY):
+        print('  希望休{}人目　: {}'.format(str(e+1).rjust(2), i))
     print('  連勤　　　　　: {}日まで'.format(MAX_CONSECUTIVE_WORK))
     print('  {} = 休み'.format(REST))
     print('  {} = 夜勤'.format(NIGHT))
