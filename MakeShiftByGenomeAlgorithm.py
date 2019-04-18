@@ -15,7 +15,7 @@ WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
-# 希望休 # 人数と当日の休日数は以上入力不可 # 左上から１人目
+# 希望休 # 左上から１人目
 # OFF_DAY = [
 #     [1,2,3,],[4,5,6,],[7,8,9,],
 #     [10,11,12,],[13,14,15,],[16,17,18,],
@@ -179,13 +179,11 @@ def evaluate(obj, max_consecutive_work, rest, night):
         work_cnt = 0
         for s in shift:
             # その日が休みなら、カウンター　＋１
-            if s == rest:
-                work_cnt = 0
-            else:
-                work_cnt += 1
+            work_cnt = [0, work_cnt + 1][s != rest]
             if work_cnt > max_consecutive_work:
                 point += P
                 continue
+
     ### 夜勤明けに日勤（夜勤後は必ず休み） ###
     # 'B' = 夜勤
     # 夜勤明けに日勤の場合 += 1
@@ -194,9 +192,8 @@ def evaluate(obj, max_consecutive_work, rest, night):
     # P = 評価値
     P = 1
     for shift in obj.getWidthShift():
-        for i in range(len(shift)):
-            # 初日をスキップ
-            if i == 0: continue
+        # 初日をスキップ
+        for i in range(1, len(shift)):    
             # 昨晩夜勤である　かつ　今日休み以外の場合
             if shift[i-1] == night and shift[i] != rest:
                 point += P
@@ -238,31 +235,6 @@ def create_new_objects(objects, elite_objects, cross_objects):
     sorted_objects.extend(cross_objects)
     return sorted_objects
 
-# # 1人１日希望休の申請 #
-# ８人の場合、８人の希望休をリストへ格納
-# [1, 4, 6, 8, 9, 10, 26, 15] ３人目の希望休は６日目となる
-# length_shiftを使用
-# 希望休ではない場合は休みの人と入れ替える
-# def take_rest(obj, off_day, rest):
-#     shift = obj.getLengthShift()
-#     # staff = 従業員の番号 # day = 希望日
-#     for staff, day in enumerate(off_day):
-#         # 従業員の希望日が休みでない場合
-#         if shift[day - 1][staff] != rest:
-#             # 希望日のシフトの中から休みの人を探す # i = 従業員の番号 # s = 'A','B','C','X' など
-#             for i, s in enumerate(shift[day - 1]):
-#                 # 本人はスキップする
-#                 if i == staff: continue
-#                 # 他の従業員が休みの場合
-#                 if s == rest:
-#                     # 休みの人が希望休でない場合 # off_day[i] = i番目の従業員の希望休の日
-#                     if off_day[i] != day:
-#                         # 希望休の人と休みの人を交換する
-#                         shift[day-1][staff], shift[day - 1][i] = shift[day - 1][i], shift[day - 1][staff]
-#                         break
-#     obj.setLengthShift(shift)
-#     return obj
-
 # # 希望休複数申請 #
 # OFF_DAY = ２次配列
 def take_rest(obj, off_day, rest):
@@ -274,16 +246,16 @@ def take_rest(obj, off_day, rest):
         # 希望日リストの内容を抽出
         for r_day in rest_days:
             r_day -= 1
-            # 希望日が休みでない場合
-            if sd[r_day][staf_id] != rest:
-                # その日の中で他に休みの人を探すために、その日の内容を抽出
-                for other_id, other_day in enumerate(sd[r_day]):
-                    # 希望日を申請している人はスキップ
-                    if other_id == staf_id: continue
-                    # 他の人が休みの場合
-                    if other_day == rest and r_day not in off_day[other_id]:
-                        sd[r_day][staf_id], sd[r_day][other_id] = sd[r_day][other_id], sd[r_day][staf_id]
-                        break
+            # 希望日が休みの場合はスキップ
+            if sd[r_day][staf_id] == rest: continue
+            # その日の中で他に休みの人を探すために、その日の内容を抽出
+            for other_id, other_day in enumerate(sd[r_day]):
+                # 希望日を申請している人はスキップ
+                if other_id == staf_id: continue
+                # 他の人が休みの場合
+                if other_day == rest and r_day not in off_day[other_id]:
+                    sd[r_day][staf_id], sd[r_day][other_id] = sd[r_day][other_id], sd[r_day][staf_id]
+                    break
     obj.setLengthShift(shift_data)
     return obj
     
@@ -379,11 +351,6 @@ if __name__=='__main__':
     
     # 世代交代開始 ############################################################
     
-    # 世代交代（制限なし）
-    # count = 0
-    # while True:
-    #     count += 1
-    
     # 世代交代（制限あり）
     for count in range(1, MAX_GENERATION + 1):
         # エリート選択
@@ -437,9 +404,6 @@ if __name__=='__main__':
     # 最優秀シフトを選択
     sorted_objects = sorted(objects, reverse=False, key=lambda u: u.evaluation)
     best_obj       = sorted_objects[0]
-    # # 勤務時間の平均値を取得
-    # m    = [ count_work_time(shift, WORK_TIME) for shift in best_obj.getWidthShift() ]
-    # work_time_avg = sum(m) / len(m)
     # エラー箇所を取得
     best_obj       = whereis_error_work_time(best_obj, WORK_TIME, WORK_AVG)
     best_obj       = whereis_error_night_work(best_obj, NIGHT, REST)
@@ -495,8 +459,8 @@ if __name__=='__main__':
     # シフト表示（CSV）
     for i, shift in enumerate(best_obj.getWidthShift()):
         print(' ', end='')
-        for s in shift:
-            print('{}, '.format(s), end='')
+        # for s in shift:
+        print(*shift, sep=',', end=',')
         print('{}'.format(count_work_time(shift, WORK_TIME)))
     print('-------------------------------------------'*4)
     # 処理後の時刻を表示
