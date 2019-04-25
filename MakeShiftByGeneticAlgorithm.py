@@ -6,11 +6,11 @@ import datetime
 ######################################################################################## setting
 ################################################ ユーザ指定項目
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','A','A','B','C','X','X','X',]
+WEEKDAY_SHIFT_PATTERN = ['A','C','X','X','X','X','X',]
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','B','X','X','X','X','X','X',]
+HOLIDAY_SHIFT_PATTERN = ['A','C','X','X','X','X','X',]
 # 勤務時間
-WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
+WORK_TIME             = {'A':8, 'B':8, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
@@ -23,10 +23,14 @@ NIGHT = 'B'
 # ３人目の希望日は７、８、９日となる
 # ４人目の希望日は１０、１１、１２日となる
 OFF_DAY = [
-    [1,2,3,],[4,5,6,],[7,8,9,],
-    [10,11,12,],[13,14,15,],[16,17,18,],
-    [19,20,21,],[22,23,24,],
-] 
+    [1,2, 5,6, 8,9, 11,12,13, 15,16, 19,20, 22,23, 25,26,27, 29,30,],
+    [5, 7,8,9,10, 15,16,17,18,19,20,21,22,23,24,25,26,27,28,],
+    [1,2,3, 5,6, 8,9,10,11, 13,14, 17, 21, 23, 26,27, 29,],
+    [3, 7, 10, 14, 17, 21, 24, 28, 30,31,],
+    [1,2,3, 6,7,8,9, 11, 13,14,15,16,17,18,19,20,21,22,23,24, 26,27,28,29,30,31,],
+    [1,2,3,4,5,6,7, 9,10,11,12,13,14,15,16,17,18,19,20, 22,23,24,25,26,27,28,29,30,31],
+    [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25, 28,29,30,31],
+]
 # 土日祝日
 WHEN_IS_HOLIDAY = [1,2,3,4,5,6, 11,12, 18,19, 25,26]
 # 作成する日数
@@ -45,7 +49,7 @@ INDIVIDUAL_MUTATION = 0.5
 # 日別変異確率
 DAY_MUTATION = 0.08
 # 諦め （設定必須）
-MAX_CONTINUE = 8000
+MAX_CONTINUE = 1000
 ######################################################################################## class
 class GenomShift:
     ### length_shift
@@ -342,7 +346,7 @@ if __name__=='__main__':
     objects = [ add_holiday_shift(obj, HOLIDAY_SHIFT_PATTERN, WHEN_IS_HOLIDAY) for obj in objects ]
     # 平均勤務時間を取得
     m    = [ count_work_time(shift, WORK_TIME) for shift in objects[0].getWidthShift() ]
-    WORK_AVG = round(sum(m) / len(m))
+    WORK_AVG = sum(m) / len(m)
     # 評価
     objects = ( evaluate(obj, MAX_CONSECUTIVE_WORK, REST, NIGHT) for obj in objects )
     # 勤務時間を評価
@@ -456,11 +460,14 @@ if __name__=='__main__':
             print('\'{}\''.format(s), end=', ')
         print('\'{0}\'] Tal: {1}'.format(shift[-1], str(count_work_time(shift_data[i], WORK_TIME))))
     print('-------------------------------------------'*4)
+
+    # 日付を表示（CSV）
+    print(*days[:-1], sep=',', end=',' + days[-1] + ',' + str(round(WORK_AVG,1)))
+    print()
     # シフト表示（CSV）
-    for i, shift in enumerate(best_obj.getWidthShift()):
-        print(' ', end='')
-        # for s in shift:
-        print(*shift, sep=',', end=',')
+    for shift in best_obj.getWidthShift():
+        ajust_shift = [s.rjust(2) for s in shift]
+        print(*ajust_shift, sep=',', end=',')
         print('{}'.format(count_work_time(shift, WORK_TIME)))
     print('-------------------------------------------'*4)
     # 処理後の時刻を表示
