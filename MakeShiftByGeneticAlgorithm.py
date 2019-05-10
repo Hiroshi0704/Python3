@@ -6,11 +6,11 @@ import datetime
 ######################################################################################## setting
 ################################################ ユーザ指定項目
 # 平日勤務体制
-WEEKDAY_SHIFT_PATTERN = ['A','C','X','X','X','X','X',]
+WEEKDAY_SHIFT_PATTERN = ['A','A','A','C', 'B','X','X','X']
 # 土日祝日勤務体制
-HOLIDAY_SHIFT_PATTERN = ['A','C','X','X','X','X','X',]
+HOLIDAY_SHIFT_PATTERN = ['A','B','X','X', 'X','X','X','X']
 # 勤務時間
-WORK_TIME             = {'A':8, 'B':8, 'C':8, 'X':0}
+WORK_TIME             = {'A':8, 'B':15, 'C':8, 'X':0}
 # 休日・夜勤設定
 REST  = 'X'
 NIGHT = 'B'
